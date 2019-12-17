@@ -51,6 +51,7 @@ import com.google.android.exoplayer2.mediacodec.MediaCodecUtil.DecoderQueryExcep
 import com.google.android.exoplayer2.offline.DownloadHelper;
 import com.google.android.exoplayer2.offline.DownloadRequest;
 import com.google.android.exoplayer2.source.BehindLiveWindowException;
+import com.google.android.exoplayer2.source.ClippingMediaSource;
 import com.google.android.exoplayer2.source.ConcatenatingMediaSource;
 import com.google.android.exoplayer2.source.MediaSource;
 import com.google.android.exoplayer2.source.MediaSourceFactory;
@@ -327,6 +328,14 @@ public class PlayerActivity extends AppCompatActivity
               /* onDismissListener= */ dismissedDialog -> isShowingTrackSelectionDialog = false);
       trackSelectionDialog.show(getSupportFragmentManager(), /* tag= */ null);
     }
+  }
+
+  public void concatenateMedia(View view) {
+    Uri firstMediaSource = Uri.parse("file:///sdcard/Download/Moana.mp4");
+    MediaSource firstSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(firstMediaSource);
+    ConcatenatingMediaSource c = new ConcatenatingMediaSource(firstSource);
+    c.addMediaSource(1,mediaSource);
+    player.prepare(c, false, false);
   }
 
   // PlaybackControlView.PlaybackPreparer implementation
