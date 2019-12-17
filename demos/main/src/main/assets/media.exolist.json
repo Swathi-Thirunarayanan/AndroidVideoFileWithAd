@@ -1,5 +1,32 @@
 [
   {
+    "name": "Swathi",
+    "samples": [
+      {
+        "name": "baby -> funnybaby",
+        "playlist": [
+          {
+            "uri": "file:///sdcard/Download/baby.mp4"
+          },
+          {
+            "uri": "file:///sdcard/Download/FunnyBaby.mp4"
+          }
+        ]
+      },
+      {
+        "name": "FunnyBaby -> CuteBaby",
+        "playlist": [
+          {
+            "uri": "file:///sdcard/Download/FunnyBaby.mp4"
+          },
+          {
+            "uri": "file:///sdcard/Download/CuteBaby.mp4"
+          }
+        ]
+      }
+    ]
+  },
+  {
     "name": "YouTube DASH",
     "samples": [
       {
