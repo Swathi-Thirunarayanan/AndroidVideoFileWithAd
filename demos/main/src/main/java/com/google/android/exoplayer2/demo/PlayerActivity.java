@@ -330,14 +330,6 @@ public class PlayerActivity extends AppCompatActivity
     }
   }
 
-  public void concatenateMedia(View view) {
-    Uri firstMediaSource = Uri.parse("file:///sdcard/Download/Moana.mp4");
-    MediaSource firstSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(firstMediaSource);
-    ConcatenatingMediaSource c = new ConcatenatingMediaSource(firstSource);
-    c.addMediaSource(1,mediaSource);
-    player.prepare(c, false, false);
-  }
-
   // PlaybackControlView.PlaybackPreparer implementation
 
   @Override
@@ -358,7 +350,16 @@ public class PlayerActivity extends AppCompatActivity
     if (player == null) {
       Intent intent = getIntent();
 
-      mediaSource = createTopLevelMediaSource(intent);
+      long oneSecond = 1000 * 1000;
+      Uri firstMediaSource = Uri.parse("file:///sdcard/Download/Moana.mp4");
+      MediaSource firstSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(firstMediaSource);
+      ClippingMediaSource videoSource1 = new ClippingMediaSource(firstSource, 0, 30 * oneSecond);
+      ClippingMediaSource videoSource2 = new ClippingMediaSource(firstSource,  30 * oneSecond, 120 * oneSecond);
+      Uri adMediaSource = Uri.parse("file:///sdcard/Download/PizzaHutAd.mp4");
+      MediaSource adSource = new ProgressiveMediaSource.Factory(dataSourceFactory).createMediaSource(adMediaSource);
+      mediaSource = new ConcatenatingMediaSource(videoSource1, adSource, videoSource2);
+      playerView.setShowMultiWindowTimeBar(true);
+
       if (mediaSource == null) {
         return;
       }
@@ -407,79 +408,7 @@ public class PlayerActivity extends AppCompatActivity
     updateButtonVisibility();
   }
 
-  @Nullable
-  private MediaSource createTopLevelMediaSource(Intent intent) {
-    String action = intent.getAction();
-    boolean actionIsListView = ACTION_VIEW_LIST.equals(action);
-    if (!actionIsListView && !ACTION_VIEW.equals(action)) {
-      showToast(getString(R.string.unexpected_intent_action, action));
-      finish();
-      return null;
-    }
-
-    Sample intentAsSample = Sample.createFromIntent(intent);
-    UriSample[] samples =
-        intentAsSample instanceof Sample.PlaylistSample
-            ? ((Sample.PlaylistSample) intentAsSample).children
-            : new UriSample[] {(UriSample) intentAsSample};
-
-    boolean seenAdsTagUri = false;
-    for (UriSample sample : samples) {
-      seenAdsTagUri |= sample.adTagUri != null;
-      if (!Util.checkCleartextTrafficPermitted(sample.uri)) {
-        showToast(R.string.error_cleartext_not_permitted);
-        return null;
-      }
-      if (Util.maybeRequestReadExternalStoragePermission(/* activity= */ this, sample.uri)) {
-        // The player will be reinitialized if the permission is granted.
-        return null;
-      }
-    }
-
-    MediaSource[] mediaSources = new MediaSource[samples.length];
-    for (int i = 0; i < samples.length; i++) {
-      mediaSources[i] = createLeafMediaSource(samples[i]);
-      Sample.SubtitleInfo subtitleInfo = samples[i].subtitleInfo;
-      if (subtitleInfo != null) {
-        Format subtitleFormat =
-            Format.createTextSampleFormat(
-                /* id= */ null,
-                subtitleInfo.mimeType,
-                C.SELECTION_FLAG_DEFAULT,
-                subtitleInfo.language);
-        MediaSource subtitleMediaSource =
-            new SingleSampleMediaSource.Factory(dataSourceFactory)
-                .createMediaSource(subtitleInfo.uri, subtitleFormat, C.TIME_UNSET);
-        mediaSources[i] = new MergingMediaSource(mediaSources[i], subtitleMediaSource);
-      }
-    }
-    MediaSource mediaSource =
-        mediaSources.length == 1 ? mediaSources[0] : new ConcatenatingMediaSource(mediaSources);
-
-    if (seenAdsTagUri) {
-      Uri adTagUri = samples[0].adTagUri;
-      if (actionIsListView) {
-        showToast(R.string.unsupported_ads_in_concatenation);
-      } else {
-        if (!adTagUri.equals(loadedAdTagUri)) {
-          releaseAdsLoader();
-          loadedAdTagUri = adTagUri;
-        }
-        MediaSource adsMediaSource = createAdsMediaSource(mediaSource, adTagUri);
-        if (adsMediaSource != null) {
-          mediaSource = adsMediaSource;
-        } else {
-          showToast(R.string.ima_not_loaded);
-        }
-      }
-    } else {
-      releaseAdsLoader();
-    }
-
-    return mediaSource;
-  }
-
-  private MediaSource createLeafMediaSource(UriSample parameters) {
+   private MediaSource createLeafMediaSource(UriSample parameters) {
     Sample.DrmInfo drmInfo = parameters.drmInfo;
     int errorStringId = R.string.error_drm_unknown;
     DrmSessionManager<ExoMediaCrypto> drmSessionManager = null;
